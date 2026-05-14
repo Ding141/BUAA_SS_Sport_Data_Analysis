@@ -1,0 +1,26 @@
+# 数据集 (过大，不提交)
+UCI HAR Dataset/
+wisdm-dataset/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude 内部文件
+.claude/
+
+# PPT (30MB, 可选跳过)
+# 20260428 信号与系统 大作业说明.pptx
