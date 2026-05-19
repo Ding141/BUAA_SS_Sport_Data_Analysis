@@ -32,6 +32,9 @@ N_SAMPLES = 128      # 每窗口采样点数
 SAVE_DIR = "figures"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
+# 说明: 该脚本实现基于频域（FFT/STFT）特征的人体动作识别流水线。
+# 流程包括: 数据加载 → 分窗（若需） → 每窗口 FFT/STFT 特征提取 → 决策树训练与可视化。
+
 plt.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 150,
     "font.size": 10, "axes.titlesize": 13, "axes.labelsize": 11,
@@ -77,6 +80,9 @@ class UCIHARDataset(DataSet):
         ]
 
     def load(self):
+        # 返回格式说明:
+        # X_raw[subset] -> ndarray, shape (n_windows, n_samples_per_window, n_channels)
+        # y[subset]     -> ndarray, shape (n_windows,) 每个窗口对应的类别标签 (int)
         X_raw, y = {}, {}
         for subset in ["train", "test"]:
             path = os.path.join(self.data_dir, subset, "Inertial Signals")
@@ -85,6 +91,8 @@ class UCIHARDataset(DataSet):
                 for signal in ["body_acc", "body_gyro"]:
                     data = np.loadtxt(os.path.join(path, f"{signal}_{axis}_{subset}.txt"))
                     channels.append(data)
+            # channels 列表中元素均为 (n_windows, n_samples) 矩阵
+            # np.stack(..., axis=-1) -> (n_windows, n_samples, n_channels=6)
             X_raw[subset] = np.stack(channels, axis=-1).astype(np.float32)
             y[subset] = np.loadtxt(
                 os.path.join(self.data_dir, subset, f"y_{subset}.txt")
@@ -146,6 +154,7 @@ class WISDMDataset(DataSet):
                     except (ValueError, IndexError):
                         continue
                     label = self.LETTER_MAP[letter]
+                    # 记录为五元组: (timestamp, x, y, z, label_id)
                     all_data.append((ts, x, y_val, z, label))
 
         return sorted(all_data, key=lambda r: r[0])
@@ -166,6 +175,7 @@ class WISDMDataset(DataSet):
                 y_windows.append(int(labels_in_window[0]))
             i += self.WINDOW_STRIDE
 
+        # 返回: X_windows (n_windows, window_size, 3), y_windows (n_windows,)
         return np.stack(X_windows), np.array(y_windows)
 
     def load(self):
@@ -218,10 +228,12 @@ def compute_fft_spectrum(window_signal, fs):
     """单窗口单通道 → FFT 单边幅度谱 + 频率轴。"""
     n = len(window_signal)
     fft_vals = fft(window_signal)
+    # 归一化为幅度谱: |FFT|/N，取单边频谱并把中间分量乘 2（直流与 Nyquist 不变）
     mag = np.abs(fft_vals) / n
     mag = mag[: n // 2 + 1]
     mag[1:-1] *= 2
     freqs = fftfreq(n, 1 / fs)[: n // 2 + 1]
+    # 返回频率轴与对应幅度（单边）
     return freqs, mag
 
 
@@ -249,6 +261,12 @@ def extract_frequency_features(mag, freqs):
         for k in ("MeanFreq", "MedianFreq", "SpectralEnergy", "SpectralEntropy",
                   "BandEnergy_Low", "BandEnergy_Mid", "BandEnergy_High"):
             f[k] = 0.0
+    # 说明: 频域特征含义
+    # - PeakFreq: 幅度谱峰值对应的频率
+    # - MeanFreq/MedianFreq: 频率统计量, 描述能量分布中心
+    # - SpectralEnergy: 幅度平方和, 代表带宽内总体能量
+    # - SpectralEntropy: 频谱的熵, 描述频谱复杂度
+    # - BandEnergy_*: 分别计算低/中/高频带的能量用于区分活动
     return f
 
 
@@ -287,6 +305,8 @@ def build_feature_matrix(raw_data, channel_names, fs, verbose=True):
 
     # 生成列名
     col_names = []
+    # 通过调用特征提取函数获取特征键名（顺序需与上文 row.extend 保持一致）
+    # 注意: 这里传入空数组只为获取 key 列表，函数内部有防护逻辑以避免除零异常。
     freq_tags = list(extract_frequency_features(np.zeros(2), np.zeros(2)).keys())
     time_tags = list(extract_time_features(np.zeros(2)).keys())
     for ch in channel_names:
@@ -326,6 +346,8 @@ def plot_waveforms(raw_data, labels, activity_names, n_samples, fs, dataset_name
         ax.set_ylabel("Accel (g)")
         ax.set_ylim(-5, 15)
 
+    # 注意: y 轴范围设置为 [-5, 15] 以兼容 WISDM（有时单位/量纲不同），可根据实际数据调整。
+
     # 隐藏空子图
     for j in range(i + 1, nrows * ncols):
         axes[j // ncols][j % ncols].set_visible(False)
@@ -352,6 +374,7 @@ def plot_stft_spectrogram(raw_data, labels, activity_names, fs, dataset_name):
             raw_data[idx, :, 0], fs=fs, nperseg=min(32, raw_data.shape[1] // 4),
             noverlap=min(24, raw_data.shape[1] // 5), nfft=min(64, raw_data.shape[1] // 2),
         )
+        # Sxx 是功率谱密度，使用 10*log10 显示为 dB 以增强时频对比度
         ax = axes[row][0]
         im = ax.pcolormesh(t_vals, f_vals, 10 * np.log10(Sxx + 1e-12),
                            shading="gouraud", cmap="viridis")
@@ -571,6 +594,7 @@ def run_pipeline(dataset):
     # ── 1. 加载数据 ──
     print_section(f"[{ds_name}] 1/5 数据加载")
     X_raw, y, activity_names, channel_names, fs, n_samples = dataset.load()
+    # X_raw: dict with 'train'/'test' arrays; 每个 array 形状如 (n_windows, n_samples, n_channels)
     print(f"  训练窗口: {X_raw['train'].shape[0]}, 测试窗口: {X_raw['test'].shape[0]}")
     print(f"  采样率: {fs} Hz, 窗口: {n_samples} 点 ({n_samples / fs:.2f} s)")
     print(f"  通道数: {X_raw['train'].shape[2]} ({', '.join(channel_names[:3])}...)")
@@ -587,6 +611,7 @@ def run_pipeline(dataset):
     print_section(f"[{ds_name}] 2/5 特征提取 (FFT 频域 8 + 时域 4 / 通道)")
     X_train, feat_names = build_feature_matrix(X_raw["train"], channel_names, fs)
     X_test, _ = build_feature_matrix(X_raw["test"], channel_names, fs)
+    # 注意: build_feature_matrix 返回的 X_train/X_test 已经是每个窗口的一维特征向量
     print(f"  训练特征: {X_train.shape}, 测试特征: {X_test.shape}")
 
     # ── 3. 超参数搜索 + 训练 ──
