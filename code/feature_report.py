@@ -245,27 +245,56 @@ def main():
     print("═" * 70)
     print("  特征重要性报告: 258 维特征 MI + RF Gini 排名")
     print("═" * 70)
+    print("""
++--------------------------------------------------------------+
+|  How the two importance metrics are calculated:               |
+|                                                              |
+|  1. MI (Mutual Information)                                  |
+|     What: How much knowing X reduces uncertainty about Y      |
+|     Formula: I(X;Y) = sum p(x,y) * log2[p(x,y)/(p(x)*p(y))]   |
+|     Range: [0, +inf), 0 = no relationship, higher = stronger  |
+|     Pros: Captures any dependency (linear + nonlinear)        |
+|     Method: sklearn mutual_info_classif, kNN density estimate  |
+|     Note: MI=1.0 means the feature reduces class uncertainty   |
+|           by about 1 bit (halves the number of likely classes) |
+|                                                              |
+|  2. RF Gini Importance (Mean Decrease in Impurity)           |
+|     What: Total impurity reduction from splits on this feature|
+|     Formula: sum over splits of (parent_gini - child_gini)*n  |
+|     Range: [0, 1], all features sum to 1                     |
+|     Pros: Reflects actual multi-variable interaction value    |
+|     Limitation: Biased toward continuous features; correlated |
+|                 features dilute each other's scores          |
+|     Note: RF=0.03 = 3% of all tree splits use this feature,   |
+|           which is already a very important feature           |
+|                                                              |
+|  They complement each other:                                  |
+|  MI looks at 'solo' power, RF Gini looks at 'teamwork' value. |
+|  High MI + Low RF -> good alone but tree doesn't need it     |
+|  Low MI + High RF -> weak alone but strong in combination    |
++--------------------------------------------------------------+
+""")
 
     # 加载
-    print("\n📂 加载数据…")
+    print("\n[1] Loading data...")
     X_raw, y = load_data()
 
     # 特征提取
-    print("🔧 提取 258 维特征…")
+    print("[2] Extracting 258-D features...")
     X_train = extract_all_features(X_raw["train"])
     print(f"  X_train: {X_train.shape}")
 
     # 构建特征名
     names, descs, types_, chs = build_feature_names()
-    print(f"  特征名数: {len(names)}, 实际维度: {X_train.shape[1]}")
-    assert len(names) == X_train.shape[1], f"特征名数({len(names)}) ≠ 维度({X_train.shape[1]})"
+    print(f"  Feature names: {len(names)}, actual dims: {X_train.shape[1]}")
+    assert len(names) == X_train.shape[1], f"Name count ({len(names)}) != dims ({X_train.shape[1]})"
 
     # MI
-    print("\n📊 计算互信息 (MI)…")
+    print("\n[3] Computing Mutual Information (MI)...")
     mi_scores = mutual_info_classif(X_train, y["train"], random_state=42)
 
     # RF 重要性
-    print("🌲 训练随机森林 (200棵树) 计算 Gini 重要性…")
+    print("[4] Training Random Forest (200 trees) for Gini importance...")
     rf = RandomForestClassifier(n_estimators=200, max_depth=20, min_samples_leaf=5,
                                 random_state=42, n_jobs=-1)
     rf.fit(X_train, y["train"])
@@ -274,64 +303,70 @@ def main():
     # 按 MI 排序
     order_mi = np.argsort(mi_scores)[::-1]
 
-    # ── 终端表格 ──
-    print("\n" + "═" * 110)
-    print("  特征重要性排名 (按 MI 降序, 前 60 维)")
-    print("═" * 110)
-    print(f"  {'排名':<5s} {'特征名':<32s} {'通道':<8s} {'类型':<6s} {'MI':<8s} {'RF Gini':<8s} {'说明'}")
-    print("  " + "─" * 106)
+    # ── 终端表格 (英文表头, 避免中文对齐问题) ──
+    print("\n" + "=" * 125)
+    print("  Feature Importance Ranking (by MI, Top 60)")
+    print("=" * 125)
+    header = f"  {'Rank':<5s} {'Feature':<35s} {'Ch':<6s} {'Type':<6s} {'MI':>8s} {'RF_Gini':>8s}  Description"
+    print(header)
+    print("  " + "-" * 121)
 
+    ftype_en = {"频域": "Freq", "时域": "Time", "滑动窗": "Sliding"}
     for rank, idx in enumerate(order_mi[:60], 1):
-        print(f"  {rank:<5d} {names[idx]:<32s} {chs[idx]:<8s} {types_[idx]:<6s} "
-              f"{mi_scores[idx]:>7.4f} {rf_scores[idx]:>7.4f}  {descs[idx]}")
+        name = names[idx]
+        ch = chs[idx]
+        ftype = ftype_en.get(types_[idx], types_[idx])
+        print(f"  {rank:<5d} {name:<35s} {ch:<6s} {ftype:<7s} {mi_scores[idx]:>8.4f} {rf_scores[idx]:>8.4f}")
 
     # ── 统计摘要 ──
-    print("\n" + "═" * 70)
-    print("  统计摘要")
-    print("═" * 70)
+    print("\n" + "=" * 70)
+    print("  Summary")
+    print("=" * 70)
 
     # 零 MI 特征
     zero_mi = np.sum(mi_scores < 1e-6)
-    print(f"  MI≈0 的特征数 (完全无区分力): {zero_mi}")
+    print(f"  Features with MI=0 (no discriminative power): {zero_mi}")
     if zero_mi > 0:
-        print(f"  列表: {[names[i] for i in np.where(mi_scores < 1e-6)[0]]}")
+        print(f"  List: {[names[i] for i in np.where(mi_scores < 1e-6)[0]]}")
 
     # 各类型占比
-    for t in ["频域", "时域", "滑动窗"]:
-        mask_t = np.array([tt == t for tt in types_])
+    ftype_labels = [("Freq", "频域"), ("Time", "时域"), ("Sliding", "滑动窗")]
+    for en_label, cn_label in ftype_labels:
+        mask_t = np.array([tt == cn_label for tt in types_])
         count = np.sum(mask_t)
         if count > 0:
             avg_mi = np.mean(mi_scores[mask_t])
             avg_rf = np.mean(rf_scores[mask_t])
-            top30_count = sum(1 for i in order_mi[:30] if types_[i] == t)
-            print(f"  {t}特征: {count}维 | MI均值={avg_mi:.4f} | RF均值={avg_rf:.4f} | Top30占{top30_count}维")
+            top30_count = sum(1 for i in order_mi[:30] if types_[i] == cn_label)
+            print(f"  {en_label:>8s}: {count:>3d} dims | MI avg={avg_mi:.4f} | RF avg={avg_rf:.4f} | Top30={top30_count}")
 
     # 各通道贡献
-    print(f"\n  各通道 Top-30 占比:")
+    print(f"\n  Channel contribution in Top-30:")
     for ch in 通道名:
         cnt = sum(1 for i in order_mi[:30] if chs[i] == ch)
-        print(f"    {ch}: {cnt}/30")
+        bar = "#" * cnt
+        print(f"    {ch:<6s}: {cnt:>2d}/30 {bar}")
 
     # 滑动窗特征排名
     sw_indices = [i for i in order_mi if types_[i] == "滑动窗"]
-    print(f"\n  滑动窗特征排名情况 (共{len(sw_indices)}维):")
+    print(f"\n  Sliding-window features ({len(sw_indices)} total), top ranks:")
     for rank, idx in enumerate(sw_indices[:15], 1):
         global_rank = list(order_mi).index(idx) + 1
-        print(f"    全局第{global_rank}名: {names[idx]:35s} MI={mi_scores[idx]:.4f} RF={rf_scores[idx]:.4f}")
+        print(f"    Global #{global_rank:<4d}: {names[idx]:40s} MI={mi_scores[idx]:.4f} RF={rf_scores[idx]:.4f}")
 
     # ── 导出 CSV ──
     csv_path = os.path.join("figures", "分类器对比", "特征重要性排名.csv")
     os.makedirs(os.path.join("figures", "分类器对比"), exist_ok=True)
-    with open(csv_path, "w", encoding="utf-8") as f:
+    with open(csv_path, "w", encoding="utf-8-sig") as f:  # utf-8-sig 加 BOM, Excel/Mac 不乱码
         f.write("排名,特征名,通道,类型,MI得分,RF_Gini得分,说明\n")
         for rank, idx in enumerate(order_mi, 1):
             f.write(f"{rank},{names[idx]},{chs[idx]},{types_[idx]},"
                     f"{mi_scores[idx]:.6f},{rf_scores[idx]:.6f},{descs[idx]}\n")
-    print(f"\n  📄 CSV 已导出: {csv_path}")
+    print(f"\n  Full CSV exported: {csv_path}")
 
-    print("\n" + "═" * 70)
-    print("  完成")
-    print("═" * 70)
+    print("\n" + "=" * 70)
+    print("  Done. CSV contains all 258 features with Chinese descriptions.")
+    print("=" * 70)
 
 
 if __name__ == "__main__":
