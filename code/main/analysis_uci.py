@@ -26,12 +26,14 @@ plt.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 150,
     "font.size": 9, "axes.titlesize": 11, "axes.labelsize": 10,
     "legend.fontsize": 7, "xtick.labelsize": 7, "ytick.labelsize": 7,
+    "font.sans-serif": ["Arial Unicode MS", "SimHei", "Heiti SC", "STHeiti"],
+    "axes.unicode_minus": False,
 })
 
 FS = 50          # Hz
 N_SAMPLES = 128  # 每窗口采样点 (2.56 s)
 DATA_DIR = "UCI HAR Dataset"
-SAVE_DIR = "figures/analysis"
+SAVE_DIR = os.path.join("figures", "频谱与特征分析")
 
 ACTIVITY = {
     1: "Walking", 2: "Walking Upstairs", 3: "Walking Downstairs",

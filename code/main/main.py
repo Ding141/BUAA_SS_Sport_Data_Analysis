@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore")
 # ── 全局配置 ──────────────────────────────────────────────────────────
 FS = 50              # 默认采样频率 (UCI: 50 Hz, WISDM accel: 20 Hz)
 N_SAMPLES = 128      # 每窗口采样点数
-SAVE_DIR = "figures"
+SAVE_DIR = os.path.join("figures", "分类流水线")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # 说明: 该脚本实现基于频域（FFT/STFT）特征的人体动作识别流水线。
@@ -39,6 +39,8 @@ plt.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 150,
     "font.size": 10, "axes.titlesize": 13, "axes.labelsize": 11,
     "legend.fontsize": 8, "xtick.labelsize": 8, "ytick.labelsize": 8,
+    "font.sans-serif": ["Arial Unicode MS", "SimHei", "Heiti SC", "STHeiti"],
+    "axes.unicode_minus": False,
 })
 sns.set_style("whitegrid")
 
@@ -588,7 +590,6 @@ def run_pipeline(dataset):
     ds_name = dataset.name
     ds_name_map = {"UCI HAR": "uci", "WISDM": "wisdm"}
     ds_tag = ds_name_map.get(ds_name, ds_name.lower().replace(" ", "_"))
-    SAVE_DIR = os.path.join("figures", ds_tag)
     os.makedirs(SAVE_DIR, exist_ok=True)
 
     # ── 1. 加载数据 ──

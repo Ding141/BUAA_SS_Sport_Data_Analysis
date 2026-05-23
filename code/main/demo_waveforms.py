@@ -13,7 +13,7 @@ import os
 FS = 50          # Hz
 N_SAMPLES = 128  # 2.56 s
 DATA_DIR = "UCI HAR Dataset"
-SAVE_DIR = "figures/demo"
+SAVE_DIR = os.path.join("figures", "演示")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 ACTIVITY = {
@@ -26,6 +26,8 @@ plt.rcParams.update({
     "figure.dpi": 200, "savefig.dpi": 200,
     "font.size": 9, "axes.titlesize": 11, "axes.labelsize": 10,
     "legend.fontsize": 8,
+    "font.sans-serif": ["Arial Unicode MS", "SimHei", "Heiti SC", "STHeiti"],
+    "axes.unicode_minus": False,
 })
 
 
