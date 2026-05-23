@@ -44,6 +44,7 @@ signal-and-system/
 │   ├── technical_report.md                #   技术报告（结构、函数、模型、参数、图片归档）
 │   └── requirements.txt                   #   Python 依赖
 │
+├── Makefile                               # 自动化脚本（make help 查看全部命令）
 ├── UCI HAR Dataset/                       # UCI HAR 数据集（不提交，见 .gitignore）
 ├── wisdm-dataset/                         # WISDM 数据集（不提交，见 .gitignore）
 └── 20260428 信号与系统 大作业说明.pptx     # 作业 PPT
@@ -64,6 +65,25 @@ numpy>=1.24.0, scipy>=1.10.0, scikit-learn>=1.2.0, matplotlib>=3.6.0, seaborn>=0
 ---
 
 ## 运行
+
+### 方式一：Makefile（推荐）
+
+```bash
+make help          # 查看所有可用命令
+
+make demo          # 6 动作时域波形演示
+make analyze       # UCI 频域深度分析（A-I, 11 张图）
+make sliding       # 滑动窗时频峰度分析（5 张图）
+make classify-uci  # UCI 决策树分类流水线（8 图）
+make classify-wisdm  # WISDM 决策树分类流水线
+make classify-all  # 双数据集分类流水线
+make advanced      # 最优分类器对比（V5, 258-D + MI/RF 特征选择）
+make report        # 258 维特征重要性排名 → CSV
+make all           # 运行全部脚本
+make clean         # 清理输出图像
+```
+
+### 方式二：直接运行脚本
 
 ```bash
 # 在项目根目录下运行
