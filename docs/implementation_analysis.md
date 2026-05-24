@@ -357,16 +357,23 @@ $$\frac{n_{c,k}}{n_k} \approx \frac{n_c}{n_{\text{total}}}, \quad \forall c, k$$
 
 ### B2. 特征工程流程
 
-```mermaid
-graph LR
-    A[原始信号<br/>(N_windows, 128, 6)] --> B[逐通道 FFT]
-    B --> C[频域特征<br/>每通道 8 维]
-    A --> D[时域统计]
-    D --> E[时域特征<br/>每通道 4 维]
-    C --> F[拼接<br/>6×(8+4)=72 维]
-    E --> F
-    F --> G[特征矩阵<br/>(N_windows, 72)]
-    G --> H[决策树分类器]
+```
+原始信号                    逐通道 FFT                 频域特征
+(N_windows, 128, 6)  ────────────────────────────→  每通道 8 维 (PeakFreq,
+  │                                                  MeanFreq, MedianFreq,
+  │                                                  SpectralEnergy,
+  │                                                  SpectralEntropy,
+  │                                                  BandLow/Mid/High)
+  │
+  └── 时域统计 ──────────────────────────────────→  时域特征
+      每通道: mean, var, peak-to-peak, ZCR          每通道 4 维
+
+                         ↓
+                  拼接 → 6通道 × (8频域 + 4时域) = 72 维特征向量
+                         ↓
+                  (N_windows, 72) 特征矩阵
+                         ↓
+                    决策树分类器
 ```
 
 ### B3. 训练/测试划分 + 评估
@@ -486,7 +493,7 @@ $$\Delta_{\text{freq}} = \text{Acc}_{\text{fusion}} - \text{Acc}_{\text{time-onl
 # 基础任务的核心脚本
 make classify-uci      # 运行 main.py uci → 决策树分类 + 8 张可视化图
 make analyze           # 运行 analysis_uci.py → 频域深度分析 11 张图
-make demo              # 运行 demo_waveforms.py → 6 动作波形演示
+make demo              # 运行 demo_waveforms.py →	 6 动作波形演示
 
 # 或直接调用
 python code/main/main.py uci
