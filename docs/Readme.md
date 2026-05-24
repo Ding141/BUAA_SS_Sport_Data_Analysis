@@ -42,6 +42,7 @@ signal-and-system/
 │   ├── assignment.md                      #   大作业原始说明
 │   ├── Readme.md                          #   本文件
 │   ├── technical_report.md                #   技术报告（结构、函数、模型、参数、图片归档）
+│   ├── implementation_analysis.md         #   基础任务实现分析（代码解析 + 数学原理）
 │   └── requirements.txt                   #   Python 依赖
 │
 ├── Makefile                               # 自动化脚本（make help 查看全部命令）
