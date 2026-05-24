@@ -74,6 +74,16 @@ $$\text{mag}_{\text{onesided}}[k] = \begin{cases} |X[k]| / N, & k = 0 \text{ 或
 - **输出**：`(freqs, mag)` — 频率轴数组 (0~25 Hz, 65 个点) 与对应归一化幅度
 - **用途**：为后续 8 个频域特征的提取提供频谱数据
 
+**效果图**：
+
+![平均幅度谱-加速度](../figures/频谱与特征分析/01_平均幅度谱_加速度.png)
+
+*图 A1-1: 6 种活动在 body_acc 三轴上的平均 FFT 幅度谱（均值 ±1σ 阴影）。动态动作（Walk/Up/Down）在 1-5 Hz 有明显主峰，静态动作（Sit/Stand/Lay）能量集中在 DC 附近。*
+
+![平均幅度谱-陀螺仪](../figures/频谱与特征分析/02_平均幅度谱_陀螺仪.png)
+
+*图 A1-2: 6 种活动在 body_gyro 三轴上的平均 FFT 幅度谱。陀螺仪对旋转敏感，上下楼（Up/Down）的陀螺仪响应显著不同于平地走（Walk）。*
+
 ---
 
 ### A1 (续). 时频转换 — STFT
@@ -120,6 +130,14 @@ $$S_{xx}[m, k]_{\text{dB}} = 10 \cdot \log_{10}\left(S_{xx}[m, k] + \varepsilon\
 - **参数选择理由**：32 点子窗 (0.64 s) 在时域上可分辨步态周期内的不同相位；75% 重叠保证时间轴的平滑过渡
 - **输出**：时频谱图，展示频率内容如何随时间演化，区分稳态动作（频谱恒定）与周期动作（频谱随时间脉动）
 - **对应关系**：analysis_uci.py 中也实现了更详细的 STFT 分析（`figure_d_stft_comparison`），覆盖 Walk/Sit/Stand/Lay 四类动作
+
+**效果图**：
+
+![STFT时频谱](../figures/分类流水线/02_STFT时频谱.png)
+
+*图 A1-3: 四类动作 (Walk/Sit/Stand/Lay) 的 STFT 时频谱 (dB 刻度)。Walking 的频谱随时间脉动（步态周期），静态动作频谱恒定且能量集中在低频。*
+
+
 
 ---
 
@@ -176,6 +194,16 @@ $$f_{\text{median}} = f_{k_m}, \quad k_m = \min \left\{ k \;\middle|\; \sum_{i=0
 - **MedianFreq** 回答"能量的中间线在哪里"
 
 代码实现使用 `np.searchsorted(cumulative, total_mag/2)` 在累计幅度数组中二分查找 50% 分位点，时间复杂度 $O(\log N)$。
+
+**效果图**：
+
+![特征分布箱线图](../figures/频谱与特征分析/07_特征分布箱线图.png)
+
+*图 A2-1: 9 个关键频域特征按 6 种活动分组的箱线图。PeakFreq、MeanFreq、SpectralEnergy 在动态/静态之间有显著差异，是分类的最强特征。*
+
+![频域指纹雷达图](../figures/频谱与特征分析/09_频域指纹雷达图.png)
+
+*图 A2-2: 6 种活动在 6 个频域指标上的"频域指纹"雷达图。Walking/Walking Upstairs/Walking Downstairs 呈现相似的高频高能模式，Sitting/Standing/Laying 呈现低频低能模式。*
 
 ---
 
@@ -234,6 +262,16 @@ $$E_{\text{band}} = \sum_{k: f_k \in [f_{\text{lo}}, f_{\text{hi}})} \text{mag}[
 - `BandEnergy_Low/Mid/High` 提供精细的频谱形状刻画
 
 `analysis_uci.py` 中还使用了更细粒度的 5 段分频（DC–2, 2–5, 5–10, 10–15, 15–25 Hz），进一步区分了平地走（~1.5 Hz）和上楼（~1 Hz + 更高谐波）。
+
+**效果图**：
+
+![频带能量堆叠柱状图](../figures/频谱与特征分析/06_频带能量堆叠柱状图.png)
+
+*图 A2-3: 6 种活动在 body_acc_x 和 body_acc_z 上的 5 频带能量堆叠柱状图。动态动作的 2–10 Hz 频带占比显著高于静态动作，而静态动作的 DC–2 Hz 占比超过 80%。*
+
+![频谱特征散点图](../figures/频谱与特征分析/08_频谱特征散点图.png)
+
+*图 A2-4: 主频 vs 谱熵 / 频谱能量的散点图。动态动作聚集在高频、高熵、高能区域，静态动作聚集在低频、低熵、低能区域，形成可区分的聚类。*
 
 ---
 
@@ -353,6 +391,12 @@ $$\frac{n_{c,k}}{n_k} \approx \frac{n_c}{n_{\text{total}}}, \quad \forall c, k$$
 - **训练方式**：21 人训练 / 9 人测试（UCI 官方划分），同一人的窗口不会同时出现在训练和测试集，保证评估的可靠性
 - **结果**：UCI 测试准确率 77.67%，WISDM 63.71%（仅加速度，无陀螺仪）
 
+**效果图**：
+
+![决策树结构图](../figures/分类流水线/05_决策树结构图.png)
+
+*图 B1-1: 决策树前 3 层结构。根节点以 body_acc_x_SpectralEnergy 分裂（区分动/静态的最强特征），第二层引入 body_gyro 的频域特征区分上下楼与平地走。*
+
 ---
 
 ### B2. 特征工程流程
@@ -414,6 +458,16 @@ $$\Delta_{\text{freq}} = \text{Acc}_{\text{fusion}} - \text{Acc}_{\text{time-onl
 
 实际结果：$\Delta_{\text{freq}} = +2.88\text{pp}$（77.67% − 74.79%），验证了频域分析的价值。
 
+**效果图**：
+
+![混淆矩阵](../figures/分类流水线/06_混淆矩阵.png)
+
+*图 B3-1: UCI HAR 测试集的混淆矩阵 (Decision Tree, 72-D)。对角线为正确分类数，Sitting 与 Standing 之间存在少量混淆（均为静态低能量动作）。*
+
+![特征重要性排名](../figures/分类流水线/07_特征重要性排名.png)
+
+*图 B3-2: 决策树 Gini 特征重要性 Top-20。红色=频域特征，蓝色=时域特征。Top-5 全部为频域特征，SpectralEnergy 和 BandEnergy 排名最靠前。*
+
 ---
 
 ## 三、任务 C：可视化演示
@@ -424,7 +478,11 @@ $$\Delta_{\text{freq}} = \text{Acc}_{\text{fusion}} - \text{Acc}_{\text{time-onl
 
 - **内容**：每种动作取一条典型窗口（训练集中间位置的样本），画加速度计三轴（body_acc_x/y/z）的时域波形
 - **观察要点**：动态动作（Walking/Upstairs/Downstairs）呈现明显的周期性波动（~1.5–2 Hz 步频）；静态动作（Sitting/Standing/Laying）波形接近平坦，仅有微小的高频噪声
-- **对应图片**：`分类流水线/01_原始波形图.png`
+- **对应图片**：`figures/分类流水线/01_原始波形图.png`
+
+![原始波形图](../figures/分类流水线/01_原始波形图.png)
+
+*图 C1-1: 6 类动作的加速度计三轴原始波形。Walking/Upstairs/Downstairs 呈现周期性波动（~1.5-2 Hz），Sitting/Standing/Laying 波形近乎平坦。*
 
 ### C2. 频谱对比图
 
@@ -433,7 +491,15 @@ $$\Delta_{\text{freq}} = \text{Acc}_{\text{fusion}} - \text{Acc}_{\text{time-onl
 - **FFT 幅度谱对比**：取两组动作对（Walking vs Walking Upstairs, Walking vs Laying, Walking Upstairs vs Laying），分别画 FFT 幅度谱并标注主峰频率
 - **STFT 时频谱**：取前 4 类动作的 body_acc_x 通道，画出频率随时间演化的热力图（dB 刻度）
 - **观察要点**：动态动作频谱在 1–5 Hz 有明显主峰，静态动作频谱能量集中在 DC 附近；STFT 显示动态动作的频谱随时间脉动（步态周期），静态动作频谱恒定
-- **对应图片**：`分类流水线/02_STFT时频谱.png`, `分类流水线/03_FFT幅度谱对比.png`
+- **对应图片**：`figures/分类流水线/02_STFT时频谱.png`, `figures/分类流水线/03_FFT幅度谱对比.png`
+
+![FFT幅度谱对比](../figures/分类流水线/03_FFT幅度谱对比.png)
+
+*图 C2-1: Walking vs Walking Upstairs / Walking vs Laying / Walking Upstairs vs Laying 的 FFT 幅度谱对比。Walking 主峰约 1.5 Hz，Walking Upstairs 主峰更低（~1 Hz）但谐波更丰富。*
+
+![频谱叠加对比](../figures/频谱与特征分析/03_频谱叠加对比.png)
+
+*图 C2-2: 6 种活动在 body_acc x/y/z 三轴上的平均频谱叠加对比。同轴叠加直观展示不同动作在频域的区分度。*
 
 ### C3. 特征分布散点图
 
@@ -441,7 +507,11 @@ $$\Delta_{\text{freq}} = \text{Acc}_{\text{fusion}} - \text{Acc}_{\text{time-onl
 
 - **内容**：从 72 维特征中选取 MeanFreq、SpectralEntropy、SpectralEnergy、PeakFreq 四类频域特征（来自不同通道），两两配对生成散点图矩阵（最多 6 幅）
 - **观察要点**：不同动作在频域特征空间中形成可区分的聚类——动态动作（蓝/绿/橙）集中在高频/高能/高熵区域，静态动作（红/紫/青）集中在低频/低能/低熵区域
-- **对应图片**：`分类流水线/04_频域特征散点图矩阵.png`
+- **对应图片**：`figures/分类流水线/04_频域特征散点图矩阵.png`
+
+![频域特征散点图矩阵](../figures/分类流水线/04_频域特征散点图矩阵.png)
+
+*图 C3-1: 频域特征两两配对散点图矩阵。选取 MeanFreq、SpectralEntropy、SpectralEnergy、PeakFreq 等关键特征，不同颜色代表不同活动，可观察到明显的聚类趋势。*
 
 ### C4. 决策树可视化
 
@@ -453,11 +523,23 @@ $$\Delta_{\text{freq}} = \text{Acc}_{\text{fusion}} - \text{Acc}_{\text{time-onl
 
 ### 补充可视化（超出基础要求，有助于分析与报告）
 
-| 图 | 函数 | 内容 |
-|----|------|------|
-| 混淆矩阵 | `plot_confusion_matrix` (line 497) | 6×6 矩阵，显示各类的预测分布 |
-| 特征重要性 | `plot_feature_importance` (line 517) | Top-20 Gini 重要度，红色=频域，蓝色=时域 |
-| 频带能量饼图 | `plot_band_energy` (line 540) | 4 类动作的三频带能量占比 |
+| 图 | 函数 | 内容 | 效果图 |
+|----|------|------|--------|
+| 混淆矩阵 | `plot_confusion_matrix` (line 497) | 6×6 矩阵，显示各类的预测分布 | 见图 B3-1 |
+| 特征重要性 | `plot_feature_importance` (line 517) | Top-20 Gini 重要度，红色=频域，蓝色=时域 | 见图 B3-2 |
+| 频带能量饼图 | `plot_band_energy` (line 540) | 4 类动作的三频带能量占比 | 见下图 |
+
+![频带能量分布](../figures/分类流水线/08_频带能量分布.png)
+
+*图补充-1: 4 类动作的频带能量饼图 (body_acc_x)。动态动作 (Walk) 的中高频能量占比显著高于静态动作 (Sit/Stand/Lay)。*
+
+![Welch功率谱密度对比](../figures/频谱与特征分析/04_Welch功率谱密度对比.png)
+
+*图补充-2: 6 种活动的 Welch 功率谱密度对比。Welch 方法通过加窗平均得到更平滑的频谱估计，比原始 FFT 更清晰展示不同活动的频域特征差异。*
+
+![动态vs静态对比](../figures/频谱与特征分析/11_动态vs静态_V2对齐对比.png)
+
+*图补充-3: 动态 vs 静态动作的时域+频域 2×2 对比（V2 改进版：峰值对齐 + 百分位包络）。时域采用 heel-strike 主峰对齐后平均，频域采用 median + 25th/75th 百分位包络替代 mean±std。*
 
 ---
 
