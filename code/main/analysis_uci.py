@@ -12,12 +12,10 @@ UCI HAR 频域深度分析：6种动作的频谱对比与特征提取
 import numpy as np
 from scipy.fft import fft, fftfreq
 from scipy.stats import entropy as stats_entropy
-from scipy.signal import stft, welch, spectrogram
+from scipy.signal import welch, spectrogram
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
-from matplotlib.patches import Patch
 import seaborn as sns
 import os
 

@@ -8,7 +8,7 @@
 import numpy as np
 from scipy.fft import fft, fftfreq
 from scipy.stats import entropy as stats_entropy
-from scipy.signal import stft, spectrogram, butter, filtfilt
+from scipy.signal import spectrogram
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.metrics import (
