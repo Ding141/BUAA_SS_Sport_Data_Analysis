@@ -1,0 +1,19 @@
+{
+  "recommended_model": "feature_ensemble",
+  "recommended_accuracy": 0.3886966551326413,
+  "recommended_macro_f1": 0.3414625368868856,
+  "base_feature_model": "feature_mlp",
+  "base_feature_accuracy": 0.37831603229527105,
+  "raw_sequence_baseline": "dual_branch_bigru",
+  "raw_sequence_baseline_accuracy": 0.3331,
+  "figures": [
+    "dl_arch_CNN1D.png",
+    "feature_mlp_confusion_matrix_normalized.png",
+    "feature_mlp_group_importance.png",
+    "feature_mlp_per_class_f1.png",
+    "feature_mlp_top_feature_importance.png",
+    "feature_mlp_training_curve.png",
+    "project_model_selection.png",
+    "unified_project_architecture.png"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "model": "feature_mlp_feature_fusion_ensemble",
+  "alpha_mlp": 0.7,
+  "accuracy": 0.3886966551326413,
+  "macro_f1": 0.3414625368868856,
+  "mlp_model": "models/wisdm_deep/wisdm_feature_mlp_best.pt",
+  "fusion_model": "models/wisdm_deep/wisdm_feature_fusion.pt"
+}
