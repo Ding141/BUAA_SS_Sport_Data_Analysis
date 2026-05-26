@@ -1,0 +1,15 @@
+# Large dataset files
+*.zip
+wisdm-dataset/
+WISDM-dataset-description.pdf
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Checkpoints
+checkpoints/
+
+# IDE
+.claude/
+.vscode/
