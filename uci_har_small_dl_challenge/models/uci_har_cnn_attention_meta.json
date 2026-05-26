@@ -1,0 +1,172 @@
+{
+  "dataset": "UCI HAR Dataset",
+  "task": "six-class human activity recognition with multi-sensor fusion",
+  "model_name": "CNNResidualAttention",
+  "activity_names": [
+    "WALKING",
+    "WALKING_UPSTAIRS",
+    "WALKING_DOWNSTAIRS",
+    "SITTING",
+    "STANDING",
+    "LAYING"
+  ],
+  "channel_names": [
+    "body_acc_x",
+    "body_acc_y",
+    "body_acc_z",
+    "body_gyro_x",
+    "body_gyro_y",
+    "body_gyro_z",
+    "total_acc_x",
+    "total_acc_y",
+    "total_acc_z"
+  ],
+  "input_shape": [
+    9,
+    128
+  ],
+  "scaler": {
+    "mean": [
+      -0.0005649615484978666,
+      -0.00023953034392058527,
+      -0.0003040141579914396,
+      0.0004695375092379974,
+      -0.0009156104525802996,
+      -0.0009073352131552246,
+      0.8009198539892509,
+      0.03260231015302843,
+      0.07742933318309142
+    ],
+    "scale": [
+      0.20056227102220966,
+      0.12259558034878214,
+      0.10890929769256721,
+      0.40890925351497964,
+      0.3902021917497809,
+      0.26371863199654444,
+      0.4179523264829997,
+      0.389938677215346,
+      0.3677740601426789
+    ]
+  },
+  "best_val_accuracy": 0.9694501018329938,
+  "test_metrics": {
+    "accuracy": 0.9199185612487275,
+    "macro_f1": 0.9204551014677808,
+    "weighted_f1": 0.9196382598306123,
+    "classification_report": {
+      "WALKING": {
+        "precision": 0.9269662921348315,
+        "recall": 0.9979838709677419,
+        "f1-score": 0.9611650485436893,
+        "support": 496.0
+      },
+      "WALKING_UPSTAIRS": {
+        "precision": 0.9887892376681614,
+        "recall": 0.9363057324840764,
+        "f1-score": 0.9618320610687023,
+        "support": 471.0
+      },
+      "WALKING_DOWNSTAIRS": {
+        "precision": 0.9633251833740831,
+        "recall": 0.9380952380952381,
+        "f1-score": 0.9505428226779252,
+        "support": 420.0
+      },
+      "SITTING": {
+        "precision": 0.8482142857142857,
+        "recall": 0.7739307535641547,
+        "f1-score": 0.8093716719914803,
+        "support": 491.0
+      },
+      "STANDING": {
+        "precision": 0.8097731239092496,
+        "recall": 0.8721804511278195,
+        "f1-score": 0.8398190045248869,
+        "support": 532.0
+      },
+      "LAYING": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 537.0
+      },
+      "accuracy": 0.9199185612487275,
+      "macro avg": {
+        "precision": 0.9228446871334351,
+        "recall": 0.9197493410398384,
+        "f1-score": 0.9204551014677808,
+        "support": 2947.0
+      },
+      "weighted avg": {
+        "precision": 0.921060096729939,
+        "recall": 0.9199185612487275,
+        "f1-score": 0.9196382598306123,
+        "support": 2947.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        495,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        15,
+        441,
+        15,
+        0,
+        0,
+        0
+      ],
+      [
+        22,
+        4,
+        394,
+        0,
+        0,
+        0
+      ],
+      [
+        2,
+        0,
+        0,
+        380,
+        109,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        68,
+        464,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        537
+      ]
+    ]
+  },
+  "train_args": {
+    "data_root": "D:\\projects\\sign(both)\\sign\\data\\uci\\UCI HAR Dataset",
+    "epochs": 12,
+    "batch_size": 256,
+    "lr": 0.002,
+    "weight_decay": 0.0001,
+    "dropout": 0.25,
+    "patience": 5,
+    "seed": 42,
+    "val_size": 0.18,
+    "model_path": "D:\\projects\\sign(both)\\uci_har_small_dl_challenge\\models\\uci_har_cnn_attention.pt",
+    "metadata_path": "D:\\projects\\sign(both)\\uci_har_small_dl_challenge\\models\\uci_har_cnn_attention_meta.json"
+  }
+}
