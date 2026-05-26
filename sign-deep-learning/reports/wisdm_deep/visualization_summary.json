@@ -1,0 +1,15 @@
+{
+  "test_accuracy": 0.3331196581196581,
+  "test_macro_f1": 0.3101697426855072,
+  "figures": [
+    "confusion_matrix_normalized.png",
+    "model_comparison.png",
+    "per_class_f1.png",
+    "saliency_jogging.png",
+    "saliency_stairs.png",
+    "saliency_standing.png",
+    "saliency_walking.png",
+    "sensor_ablation.png",
+    "training_curve.png"
+  ]
+}

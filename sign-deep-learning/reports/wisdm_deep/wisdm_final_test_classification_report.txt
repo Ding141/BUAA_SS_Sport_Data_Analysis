@@ -1,0 +1,29 @@
+Model: dual_branch_bigru
+Training data: train+validation subjects after architecture selection
+Test accuracy: 0.3331
+Test macro F1: 0.3102
+
+              precision    recall  f1-score   support
+
+     walking     0.8309    0.4346    0.5707       260
+     jogging     0.9034    0.8269    0.8635       260
+      stairs     0.5473    0.6231    0.5827       260
+     sitting     0.1529    0.0500    0.0754       260
+    standing     0.3874    0.4500    0.4164       260
+      typing     0.1801    0.4038    0.2491       260
+       teeth     0.2905    0.6000    0.3915       260
+        soup     0.2254    0.1500    0.1801       260
+       chips     0.0000    0.0000    0.0000       260
+       pasta     0.0680    0.0769    0.0722       260
+    drinking     0.0000    0.0000    0.0000       260
+    sandwich     0.0575    0.0192    0.0288       260
+     kicking     0.4476    0.6077    0.5155       260
+       catch     0.4014    0.4462    0.4226       260
+   dribbling     0.4622    0.4462    0.4540       260
+     writing     0.0227    0.0231    0.0229       260
+    clapping     0.2452    0.2462    0.2457       260
+     folding     0.4208    0.5923    0.4920       260
+
+    accuracy                         0.3331      4680
+   macro avg     0.3135    0.3331    0.3102      4680
+weighted avg     0.3135    0.3331    0.3102      4680
