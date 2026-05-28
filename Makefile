@@ -4,7 +4,7 @@
 # 查看所有目标: make help
 
 .PHONY: help demo analyze classify classify-uci classify-wisdm classify-all \
-        advanced sliding report all clean
+        advanced sliding report showcase all clean
 
 # ── 默认目标 ──────────────────────────────────────────────────
 
@@ -20,6 +20,7 @@ help:
 	@echo "║  make classify-all     双数据集分类流水线                   ║"
 	@echo "║  make advanced         最优分类器对比 (V5, 258-D)           ║"
 	@echo "║  make report           258 维特征重要性排名 → CSV           ║"
+	@echo "║  make showcase         决策树详解 + 四分类对比 (7 张图)    ║"
 	@echo "║  make all              运行全部脚本                         ║"
 	@echo "║  make clean            清理输出图像                         ║"
 	@echo "╚══════════════════════════════════════════════════════════════╝"
@@ -68,6 +69,12 @@ advanced:
 report:
 	@echo "=== 258 维特征重要性排名 → CSV ==="
 	python code/main/feature_report.py
+
+# ── 分类器展示 ────────────────────────────────────────────────
+
+showcase:
+	@echo "=== 决策树详解 + 四分类器对比 (7 张图) ==="
+	python code/main/classifier_showcase.py
 
 # ── 全部 ──────────────────────────────────────────────────────
 
