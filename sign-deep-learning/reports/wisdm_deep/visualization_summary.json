@@ -1,15 +1,25 @@
 {
-  "test_accuracy": 0.3331196581196581,
-  "test_macro_f1": 0.3101697426855072,
+  "test_accuracy": 0.5025641025641026,
+  "test_macro_f1": 0.4960961863578735,
   "figures": [
     "confusion_matrix_normalized.png",
+    "dl_arch_CNN1D.png",
+    "ensemble_confusion_matrix_normalized.png",
+    "ensemble_per_class_f1.png",
+    "feature_mlp_confusion_matrix_normalized.png",
+    "feature_mlp_group_importance.png",
+    "feature_mlp_per_class_f1.png",
+    "feature_mlp_top_feature_importance.png",
+    "feature_mlp_training_curve.png",
     "model_comparison.png",
     "per_class_f1.png",
+    "project_model_selection.png",
     "saliency_jogging.png",
     "saliency_stairs.png",
     "saliency_standing.png",
     "saliency_walking.png",
     "sensor_ablation.png",
-    "training_curve.png"
+    "training_curve.png",
+    "unified_project_architecture.png"
   ]
 }

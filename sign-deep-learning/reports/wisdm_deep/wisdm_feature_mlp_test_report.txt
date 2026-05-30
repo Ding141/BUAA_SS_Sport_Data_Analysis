@@ -1,29 +1,23 @@
 Model: feature_mlp
 Source: phone accel+gyro ARFF
-Accuracy: 0.3783
-Macro F1: 0.3306
+Accuracy: 0.5420
+Macro F1: 0.4844
 
               precision    recall  f1-score   support
 
-     walking     0.9474    0.5455    0.6923       132
-     jogging     0.5570    0.9565    0.7040        46
-      stairs     0.5455    0.8182    0.6545        44
-     sitting     0.1277    0.3913    0.1925        46
-    standing     0.6562    0.4773    0.5526        44
-      typing     0.0759    0.1304    0.0960        46
-       teeth     0.1800    0.2045    0.1915        44
-        soup     0.0000    0.0000    0.0000        46
-       chips     0.0000    0.0000    0.0000        43
-       pasta     0.2198    0.4545    0.2963        44
-    drinking     0.1053    0.0444    0.0625        45
-    sandwich     0.6250    0.3488    0.4478        43
-     kicking     0.4578    0.8636    0.5984        44
-       catch     0.2500    0.1905    0.2162        42
-   dribbling     0.6000    0.0732    0.1304        41
-     writing     0.5556    0.1250    0.2041        40
-    clapping     0.1000    0.1282    0.1124        39
-     folding     0.9630    0.6842    0.8000        38
+     walking     0.9444    0.6439    0.7658       132
+     jogging     0.6970    1.0000    0.8214        46
+      stairs     0.6290    0.8864    0.7358        44
+     sitting     0.2673    0.5870    0.3673        46
+    standing     0.8372    0.8182    0.8276        44
+       teeth     0.1077    0.1591    0.1284        44
+       pasta     0.1964    0.2500    0.2200        44
+    sandwich     0.8333    0.1163    0.2041        43
+     kicking     0.5143    0.8182    0.6316        44
+       catch     0.4375    0.1667    0.2414        42
+     writing     0.0000    0.0000    0.0000        40
+     folding     0.9677    0.7895    0.8696        38
 
-    accuracy                         0.3783       867
-   macro avg     0.3870    0.3576    0.3306       867
-weighted avg     0.4384    0.3783    0.3661       867
+    accuracy                         0.5420       607
+   macro avg     0.5360    0.5196    0.4844       607
+weighted avg     0.5940    0.5420    0.5266       607

@@ -34,6 +34,7 @@ def train_candidate(
     batch_size: int,
     lr: float,
     device: torch.device,
+    selection_metric: str,
 ) -> dict[str, object]:
     torch.manual_seed(42)
     np.random.seed(42)
@@ -49,12 +50,15 @@ def train_candidate(
     criterion = nn.CrossEntropyLoss(weight=torch.from_numpy(weights).to(device))
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
 
-    best_val_acc = -1.0
+    best_val_score = -1.0
     best_state = None
     history = []
     for epoch in range(1, epochs + 1):
         train_loss, train_acc = run_epoch(model, train_loader, criterion, optimizer, device)
         val_loss, val_acc = run_epoch(model, val_loader, criterion, None, device)
+        val_true, val_pred = predict_all(model, val_loader, device)
+        val_macro_f1 = f1_score(val_true, val_pred, average="macro", zero_division=0)
+        val_score = val_macro_f1 if selection_metric == "macro_f1" else val_acc
         history.append(
             {
                 "epoch": epoch,
@@ -62,14 +66,16 @@ def train_candidate(
                 "train_acc": train_acc,
                 "val_loss": val_loss,
                 "val_acc": val_acc,
+                "val_macro_f1": val_macro_f1,
             }
         )
         print(
             f"{architecture} epoch {epoch:02d}/{epochs} "
-            f"train_acc={train_acc:.4f} val_acc={val_acc:.4f}"
+            f"train_acc={train_acc:.4f} val_acc={val_acc:.4f} "
+            f"val_macro_f1={val_macro_f1:.4f}"
         )
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
+        if val_score > best_val_score:
+            best_val_score = val_score
             best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
 
     assert best_state is not None
@@ -100,9 +106,16 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument(
+        "--selection-metric",
+        choices=["macro_f1", "accuracy"],
+        default="macro_f1",
+        help="Validation metric used to choose checkpoints and the final raw-sequence architecture.",
+    )
+    parser.add_argument(
         "--architectures",
         nargs="+",
-        default=["cnn1d", "cnn_gru", "cnn_bigru", "cnn_lstm", "cnn_bilstm", "transformer", "dual_branch_bigru"],
+        default=["cnn1d", "cnn_gru", "cnn_bigru", "cnn_lstm", "cnn_bilstm", "transformer",
+                 "dual_branch_bigru", "tcn", "inception_time", "deep_conv_lstm", "resnet1d"],
     )
     args = parser.parse_args()
 
@@ -140,6 +153,7 @@ def main() -> None:
             args.batch_size,
             args.lr,
             device,
+            args.selection_metric,
         )
         rows.append(
             {
@@ -174,7 +188,13 @@ def main() -> None:
             f"{architecture}: val_acc={result['val_accuracy']:.4f}, "
             f"test_acc={result['test_accuracy']:.4f}"
         )
-        if best_result is None or result["val_accuracy"] > best_result["val_accuracy"]:
+        result_score = result["val_macro_f1"] if args.selection_metric == "macro_f1" else result["val_accuracy"]
+        best_score = (
+            -1.0
+            if best_result is None
+            else best_result["val_macro_f1"] if args.selection_metric == "macro_f1" else best_result["val_accuracy"]
+        )
+        if best_result is None or result_score > best_score:
             best_result = {**result, "path": candidate_path}
 
     csv_path = report_dir / "deep_model_comparison.csv"
@@ -192,7 +212,7 @@ def main() -> None:
     (report_dir / "best_deep_model.json").write_text(
         json.dumps(
             {
-                "selected_by": "highest validation accuracy on held-out subjects",
+                "selected_by": f"highest validation {args.selection_metric} on held-out subjects",
                 "best_architecture": best_result["architecture"],
                 "val_accuracy": best_result["val_accuracy"],
                 "val_macro_f1": best_result["val_macro_f1"],

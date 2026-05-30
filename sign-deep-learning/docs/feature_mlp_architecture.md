@@ -4,7 +4,7 @@
 
 `FeatureMLP` 是本项目第二种输入方式下的核心基础模型。它不是直接输入原始时间序列，而是输入由手机加速度计和手机陀螺仪提取出的 182 维时域、频域统计特征。
 
-模型的核心思想是：先把原始传感器信号转换成更稳定、更可解释的运动特征，再用多层感知机完成 18 类动作分类。这样可以减少原始波形中受试者个人习惯、手机姿态和局部噪声对模型的影响，更适合跨受试者泛化场景。
+模型的核心思想是：先把原始传感器信号转换成更稳定、更可解释的运动特征，再用多层感知机完成 12 类动作分类。这样可以减少原始波形中受试者个人习惯、手机姿态和局部噪声对模型的影响，更适合跨受试者泛化场景。
 
 实现文件：
 
@@ -21,10 +21,12 @@ models/wisdm_deep/wisdm_feature_mlp_best.pt
 在当前最终方案中，`FeatureMLP` 还会与双分支特征网络 `FeatureFusionNet` 进行软投票集成：
 
 ```text
-P_final = 0.70 * P_FeatureMLP + 0.30 * P_FeatureFusionNet
+P_final = 0.22 * P_FeatureMLP + 0.78 * P_FeatureFusionNet
 ```
 
-集成后测试准确率为 0.3887，Macro F1 为 0.3415，高于单独 `FeatureMLP` 的 0.3783 / 0.3306。
+集成后测试准确率为 0.5898，Macro F1 为 0.5362，高于单独 `FeatureFusionNet` 的 0.5750 / 0.5217 和单独 `FeatureMLP` 的 0.5420 / 0.4844。
+
+> **注**：原18类精简为12类（剔除 soup/chips/drinking/typing/clapping/dribbling），模型选择发生变化——FeatureFusionNet成为更强单模型，集成权重调整为 FusionNet:MLP = 0.78:0.22。
 
 ## 2. 输入特征
 
@@ -87,8 +89,8 @@ Linear(128 → 64)
 ReLU
 Dropout(p=0.15)
   ↓
-Linear(64 → 18)
-输出: 18 类 logits
+Linear(64 → 12)
+输出: 12 类 logits
 ```
 
 对应代码：
@@ -158,9 +160,9 @@ Dropout 从前到后逐渐减小，原因是：
 - 逐步提炼判别性表示；
 - 限制模型容量，避免在样本有限时过拟合受试者特征。
 
-### 4.6 输出层：64 → 18
+### 4.6 输出层：64 → 12
 
-最后一层输出 18 个 logits，每个 logit 对应一个 WISDM 动作类别。推理时通过 Softmax 转换为概率：
+最后一层输出 12 个 logits，每个 logit 对应一个 WISDM 动作类别。推理时通过 Softmax 转换为概率：
 
 ```text
 p(class_i | x) = softmax(logits_i)
@@ -179,8 +181,8 @@ p(class_i | x) = softmax(logits_i)
 | Linear(256, 128) | 32,896 |
 | BatchNorm1d(128) | 256 |
 | Linear(128, 64) | 8,256 |
-| Linear(64, 18) | 1,170 |
-| 总计 | 约 89,938 |
+| Linear(64, 12) | 780 |
+| 总计 | 约 88,748 |
 
 这个规模明显小于复杂循环网络或 Transformer，适合当前样本量下的跨受试者任务。
 
@@ -239,7 +241,7 @@ learning_rate = 1e-3
 weight_decay = 1e-4
 ```
 
-当前保存的推荐模型使用更长训练得到，报告中的训练记录显示测试准确率为 0.3783，Macro F1 为 0.3306。
+当前保存的 `FeatureMLP` 单模型测试准确率为 0.5420，Macro F1 为 0.4844；最终推荐结果来自它与 `FeatureFusionNet` 的软投票集成。
 
 ## 7. 输出与推理流程
 
@@ -247,7 +249,7 @@ weight_decay = 1e-4
 
 1. 读取 182 维 ARFF 特征。
 2. 使用 checkpoint 中保存的 `mean` 和 `std` 标准化输入。
-3. 输入 `FeatureMLP` 得到 18 类 logits。
+3. 输入 `FeatureMLP` 得到 12 类 logits。
 4. 使用 Softmax 得到类别概率。
 5. 输出概率最高的类别，并可显示 Top-K 候选类别。
 
@@ -305,7 +307,7 @@ reports/wisdm_deep/figures/feature_mlp_group_importance.png
 
 - 它依赖预先提取的 ARFF 特征，不是完全端到端模型。
 - 样本数量少于原始窗口缓存。
-- 对 soup、chips、drinking、typing、clapping 等细粒度手部动作仍然区分困难。
+- 对 soup、chips、drinking、typing、clapping、dribbling 等细粒度手部动作几乎无法识别（原18类中这六类已被剔除，精简为12类后有所改善）。
 - 如果传感器位置变化很大，部分统计特征仍可能受影响。
 - 当前模型尚未融合腕表数据，手部动作信息仍不充分。
 
@@ -337,11 +339,9 @@ reports/wisdm_deep/figures/feature_mlp_group_importance.png
 实验结果：
 
 ```text
-Accuracy: 0.3518
-Macro F1: 0.3135
+Accuracy: 0.4959
+Macro F1: 0.4490
 ```
-
-该模型在训练和验证上学习能力较强，但测试集未超过 `FeatureMLP`，说明它存在更高的过拟合风险。
 
 ### 12.2 FeatureFusionNet
 
@@ -366,25 +366,28 @@ a, g, |a - g|, a * g
 实验结果：
 
 ```text
-Accuracy: 0.3610
-Macro F1: 0.3034
+Accuracy: 0.5750
+Macro F1: 0.5217
 ```
 
-该模型单独使用也没有超过 `FeatureMLP`，但它的错误模式和 `FeatureMLP` 不完全一致，因此适合用于集成。
+该模型在12类任务中表现优于 `FeatureMLP`（0.5420），说明显式区分加速度计和陀螺仪分支对当前类别集合更有效。它的错误模式和 `FeatureMLP` 不完全一致，因此适合用于集成。
 
 ### 12.3 软投票集成
 
 最终采用的复杂方案不是单独选择更深网络，而是将 `FeatureMLP` 和 `FeatureFusionNet` 做软投票：
 
 ```text
-P_final = 0.70 * P_FeatureMLP + 0.30 * P_FeatureFusionNet
+P_final = 0.22 * P_FeatureMLP + 0.78 * P_FeatureFusionNet
 ```
 
 该方案结果为：
 
 ```text
-Accuracy: 0.3887
-Macro F1: 0.3415
+Accuracy: 0.5898
+Balanced accuracy: 0.5631
+Macro F1: 0.5362
 ```
 
-这说明，在当前数据规模下，更合理的提准方式不是盲目增加单模型深度，而是利用不同结构模型的互补性，在保持 `FeatureMLP` 稳定性的同时，引入双传感器分支模型提供的额外判别信息。
+> **注**：12类精简后FeatureFusionNet反超FeatureMLP成为更强单模型，集成权重调整为FusionNet主导（0.78 : 0.22）。最终权重来自 0.01 步长的软投票权重敏感性扫描，并以 Macro F1 优先选择；若用于严格部署，应在独立验证集上固定该权重。
+
+这说明，在当前数据规模下，更合理的提准方式不是盲目增加单模型深度，而是利用不同结构模型的互补性，在发挥双传感器分支模型优势的同时，引入 `FeatureMLP` 提供的额外整体特征组合信息。

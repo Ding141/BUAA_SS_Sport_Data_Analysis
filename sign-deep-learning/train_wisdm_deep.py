@@ -96,7 +96,8 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
     parser.add_argument(
         "--architecture",
-        choices=["cnn1d", "cnn_gru", "cnn_bigru", "cnn_lstm", "cnn_bilstm", "transformer", "dual_branch_bigru"],
+        choices=["cnn1d", "cnn_gru", "cnn_bigru", "cnn_lstm", "cnn_bilstm", "transformer",
+                 "dual_branch_bigru", "tcn", "inception_time", "deep_conv_lstm", "resnet1d"],
         default="dual_branch_bigru",
         help="Deep network architecture",
     )

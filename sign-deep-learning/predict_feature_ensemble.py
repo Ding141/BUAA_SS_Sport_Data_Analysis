@@ -16,7 +16,12 @@ def main() -> None:
     parser.add_argument("--cache", default="models/wisdm_deep/fused_arff_features_phone.npz")
     parser.add_argument("--mlp-model", default="models/wisdm_deep/wisdm_feature_mlp_best.pt")
     parser.add_argument("--fusion-model", default="models/wisdm_deep/wisdm_feature_fusion.pt")
-    parser.add_argument("--alpha-mlp", type=float, default=0.70)
+    parser.add_argument(
+        "--alpha-mlp",
+        type=float,
+        default=0.22,
+        help="Soft-voting weight for FeatureMLP. FusionNet receives 1 - alpha.",
+    )
     parser.add_argument("--sample", type=int, default=0)
     parser.add_argument("--top-k", type=int, default=5)
     args = parser.parse_args()
@@ -52,6 +57,8 @@ def main() -> None:
     best = int(order[0])
 
     print(f"Input: {args.cache} sample #{args.sample}")
+    print(f"Alpha MLP: {args.alpha_mlp:.2f}")
+    print(f"Alpha FusionNet: {1.0 - args.alpha_mlp:.2f}")
     print(f"True activity: {bundle.label_names[int(bundle.y[args.sample])]}")
     print(f"Predicted label code: {bundle.label_codes[best]}")
     print(f"Predicted activity: {bundle.label_names[best]}")

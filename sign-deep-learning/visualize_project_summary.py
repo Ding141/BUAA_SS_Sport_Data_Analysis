@@ -43,6 +43,25 @@ def plot_model_selection() -> None:
         accuracy=lambda d: d["test_accuracy"],
         macro_f1=lambda d: d["test_macro_f1"],
     )[["model", "family", "accuracy", "macro_f1"]]
+    final_raw_path = REPORT_DIR / "wisdm_final_training.json"
+    if final_raw_path.exists():
+        final_raw = json.loads(final_raw_path.read_text(encoding="utf-8"))
+        raw_rows = pd.concat(
+            [
+                raw_rows,
+                pd.DataFrame(
+                    [
+                        {
+                            "model": f"{final_raw['architecture']}_final",
+                            "family": "raw sequence",
+                            "accuracy": final_raw["test_accuracy"],
+                            "macro_f1": final_raw["test_macro_f1"],
+                        }
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
 
     extras = []
     feature_report = json.loads((REPORT_DIR / "wisdm_feature_mlp_training.json").read_text(encoding="utf-8"))
@@ -97,7 +116,7 @@ def plot_model_selection() -> None:
         plt.text(value + 0.006, y, f"{value:.3f}", va="center", fontsize=9)
     plt.xlabel("跨受试者测试准确率")
     plt.ylabel("模型")
-    plt.title("WISDM 18 类模型选择对比")
+    plt.title("WISDM 12 类模型选择对比")
     plt.xlim(0, max(0.45, df["accuracy"].max() + 0.06))
     plt.legend(loc="lower right")
     plt.tight_layout()
@@ -185,6 +204,13 @@ def plot_feature_per_class_f1() -> None:
 
 
 def plot_architecture_overview() -> None:
+    ensemble = json.loads((REPORT_DIR / "wisdm_feature_ensemble_summary.json").read_text(encoding="utf-8"))
+    raw = pd.read_csv(REPORT_DIR / "unified_model_selection.csv")
+    raw_rows = raw[raw["family"].eq("raw sequence")]
+    raw_best = raw_rows.sort_values("accuracy", ascending=False).iloc[0] if not raw_rows.empty else None
+    raw_accuracy = float(raw_best["accuracy"]) if raw_best is not None else 0.0
+    raw_model = str(raw_best["model"]).replace("_", " ") if raw_best is not None else "raw sequence"
+    final_accuracy = float(ensemble["accuracy"])
     fig, ax = plt.subplots(figsize=(13, 6.2))
     ax.axis("off")
     ax.set_xlim(0, 13)
@@ -193,11 +219,11 @@ def plot_architecture_overview() -> None:
     boxes = [
         ("WISDM 原始数据\n手机加速度计 + 陀螺仪", 0.4, 3.8, 2.1, 1.0, "#E8EEF7"),
         ("6 通道窗口\n6 x 200, 步长 100", 3.1, 4.2, 2.2, 1.0, "#DDECCB"),
-        ("Dual-Branch BiGRU\n端到端基线", 6.0, 4.2, 2.3, 1.0, "#BFD7EA"),
-        ("原始序列评估\n准确率 0.333", 9.2, 4.2, 2.3, 1.0, "#F6D6AD"),
+        (f"{raw_model}\n端到端基线", 6.0, 4.2, 2.3, 1.0, "#BFD7EA"),
+        (f"原始序列评估\n准确率 {raw_accuracy:.3f}", 9.2, 4.2, 2.3, 1.0, "#F6D6AD"),
         ("ARFF 时频特征\n182 维工程特征", 3.1, 2.1, 2.2, 1.0, "#DDECCB"),
-        ("FeatureMLP + Fusion\n软投票集成", 6.0, 2.1, 2.3, 1.0, "#C7E9C0"),
-        ("最终报告与图表\n准确率 0.389", 9.2, 2.1, 2.3, 1.0, "#F6D6AD"),
+        ("FeatureFusionNet + MLP\n软投票集成", 6.0, 2.1, 2.3, 1.0, "#C7E9C0"),
+        (f"最终报告与图表\n准确率 {final_accuracy:.3f}", 9.2, 2.1, 2.3, 1.0, "#F6D6AD"),
     ]
     for text, x, y, w, h, color in boxes:
         rect = plt.Rectangle((x, y), w, h, facecolor=color, edgecolor="#3A3A3A", linewidth=1.3)
@@ -218,12 +244,12 @@ def plot_architecture_overview() -> None:
     ax.text(
         0.5,
         0.8,
-        "选择原则：以跨受试者测试作为最终指标，优先选择能反映跨用户泛化能力、可解释性更强且复杂度适中的模型。",
+        "选择原则：以跨受试者测试作为最终指标，优先选择能反映跨用户泛化能力、可解释性更强且复杂度适中的模型。\n原18类中soup/chips/drinking/typing/clapping/dribbling六类因验证准确率过低已剔除，精简为12类。",
         fontsize=10,
         color="#333",
         wrap=True,
     )
-    ax.set_title("WISDM 18 类动作识别深度学习项目架构", fontsize=15, weight="bold")
+    ax.set_title("WISDM 12 类动作识别深度学习项目架构", fontsize=15, weight="bold")
     plt.tight_layout()
     plt.savefig(FIG_DIR / "unified_project_architecture.png", dpi=180)
     plt.close()
@@ -237,14 +263,24 @@ def main() -> None:
     plot_feature_confusion_matrix()
     plot_feature_per_class_f1()
     plot_architecture_overview()
+    ensemble = json.loads((REPORT_DIR / "wisdm_feature_ensemble_summary.json").read_text(encoding="utf-8"))
+    fusion = json.loads((REPORT_DIR / "wisdm_feature_fusion_training.json").read_text(encoding="utf-8"))
+    model_selection = pd.read_csv(REPORT_DIR / "unified_model_selection.csv")
+    raw_rows = model_selection[model_selection["family"].eq("raw sequence")]
+    raw_best = raw_rows.sort_values("accuracy", ascending=False).iloc[0] if not raw_rows.empty else None
     summary = {
         "recommended_model": "feature_ensemble",
-        "recommended_accuracy": 0.3886966551326413,
-        "recommended_macro_f1": 0.3414625368868856,
-        "base_feature_model": "feature_mlp",
-        "base_feature_accuracy": 0.37831603229527105,
-        "raw_sequence_baseline": "dual_branch_bigru",
-        "raw_sequence_baseline_accuracy": 0.3331,
+        "recommended_accuracy": ensemble["accuracy"],
+        "recommended_balanced_accuracy": ensemble.get("balanced_accuracy"),
+        "recommended_macro_f1": ensemble["macro_f1"],
+        "alpha_mlp": ensemble["alpha_mlp"],
+        "alpha_fusion": ensemble["alpha_fusion"],
+        "base_feature_model": "feature_fusion",
+        "base_feature_accuracy": fusion["test_accuracy"],
+        "base_feature_macro_f1": fusion["test_macro_f1"],
+        "raw_sequence_baseline": str(raw_best["model"]) if raw_best is not None else None,
+        "raw_sequence_baseline_accuracy": float(raw_best["accuracy"]) if raw_best is not None else None,
+        "raw_sequence_baseline_macro_f1": float(raw_best["macro_f1"]) if raw_best is not None else None,
         "figures": sorted(path.name for path in FIG_DIR.glob("*.png")),
     }
     (REPORT_DIR / "project_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")

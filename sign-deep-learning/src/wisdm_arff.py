@@ -78,9 +78,17 @@ def load_wisdm_arff_fused(data_dir: Path, device: str = "phone") -> WisdmArffBun
         if not np.any(keep):
             continue
 
-        fused = np.concatenate([accel_X[:n][keep], gyro_X[:n][keep]], axis=1)
-        y = np.asarray([code_to_id[str(code)] for code in labels[keep]], dtype=np.int64)
-        subjects = accel_subjects[:n][keep]
+        # Filter to only include labels present in ACTIVITY_NAME_BY_CODE
+        valid_mask = np.asarray([str(code) in code_to_id for code in labels[keep]], dtype=bool)
+        if not np.any(valid_mask):
+            continue
+        keep_indices = np.flatnonzero(keep)
+        keep_indices = keep_indices[valid_mask]
+        labels_filtered = labels[keep_indices]
+
+        fused = np.concatenate([accel_X[:n][keep_indices], gyro_X[:n][keep_indices]], axis=1)
+        y = np.asarray([code_to_id[str(code)] for code in labels_filtered], dtype=np.int64)
+        subjects = accel_subjects[:n][keep_indices]
         X_parts.append(fused)
         y_parts.append(y)
         subject_parts.append(subjects)

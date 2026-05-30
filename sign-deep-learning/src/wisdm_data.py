@@ -16,18 +16,12 @@ ACTIVITY_NAME_BY_CODE = {
     "C": "stairs",
     "D": "sitting",
     "E": "standing",
-    "F": "typing",
     "G": "teeth",
-    "H": "soup",
-    "I": "chips",
     "J": "pasta",
-    "K": "drinking",
     "L": "sandwich",
     "M": "kicking",
     "O": "catch",
-    "P": "dribbling",
     "Q": "writing",
-    "R": "clapping",
     "S": "folding",
 }
 
