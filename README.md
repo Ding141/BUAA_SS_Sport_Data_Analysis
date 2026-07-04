@@ -157,7 +157,7 @@ python visualize_project_summary.py         # 生成项目总结图表
 # 需要先运行 train_uci_feature_fusion.py 得到模型权重
 cd prediction_demo
 python predict.py                           # 预测全部 SportBUAA 样本
-python predict.py --sample walking0 --detail  # 单个样本 + 逐窗口概率详情
+python predict.py --sample sitting0 --detail  # 单个样本 + 逐窗口概率详情
 ```
 
 ---
