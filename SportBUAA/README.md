@@ -7,7 +7,7 @@
 使用手机 APP 在腰部采集加速度计和陀螺仪时序信号。
 
 - **活动类别**（6 类）：laying, sitting, standing, walking, walking_upstairs, walking_downstairs
-- **传感器**：加速度计 (m/s²) + 陀螺仪 (rad/s)
+- **传感器**：加速度计 (g, TYPE_LINEAR_ACCELERATION，已由系统完成重力补偿) + 陀螺仪 (rad/s)
 - **数据格式**：CSV，四列 `seconds_elapsed, z, y, x`，与 UCI HAR 对齐
 
 ## 用途
@@ -16,7 +16,7 @@
 
 ## 推理流水线（对应报告第 5.2 节）
 
-1. **数据对齐预处理**：线性插值至 50Hz 统一时间网格，m/s²→g 单位换算，坐标轴翻转对齐
+1. **数据对齐预处理**：线性插值至 50Hz 统一时间网格，坐标轴翻转对齐
 2. **滑动窗口切分**：128 点/窗，步长 64（50% 重叠）
 3. **StandardScaler 标准化**：使用训练集拟合参数
 4. **模型推理**：FeatureFusionNet 逐窗口前向传播，Softmax 输出 6 类概率

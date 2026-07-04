@@ -23,7 +23,7 @@
 - 分裂准则：基尼系数
 - 配置：max_depth=5, min_samples_split=20, min_samples_leaf=10
 - 准确率：**~74%**
-- 树结构揭示物理直觉：根节点 StdMean → PeakX → MeanX
+- 树结构揭示物理直觉：根节点 MeanX（重力方向）→ 二级 PeakX（冲击幅度）→ 三级 RMS / SMA / MeanX
 
 ### 高斯混合模型 (GMM)
 - 生成式建模 + EM 参数估计 + BIC 自动选参

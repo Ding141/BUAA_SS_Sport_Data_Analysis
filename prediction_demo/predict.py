@@ -13,7 +13,7 @@ r"""SportBUAA 跨数据集活动识别推理流水线。
 
 依赖:
     需要 feature_fusion_har.pt（权重）和 feature_fusion_har_meta.json（元数据）
-    两个文件需由 deep_learning/train_wisdm_feature_fusion.py 训练生成后放入本目录。
+    两个文件需由 deep_learning/train_uci_feature_fusion.py 训练生成后放入本目录。
 """
 
 import argparse
