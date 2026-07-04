@@ -223,7 +223,7 @@ wisdm-dataset/
 
 # Generated figures
 showcase/figures/
-frequency_analysis/figures/
+figures/
 
 # Trained model checkpoints (large .pt files)
 deep_learning/models/wisdm_deep/*.pt

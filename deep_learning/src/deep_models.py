@@ -181,6 +181,108 @@ class DualBranchCNNGRU(nn.Module):
         return self.classifier(sequence.mean(dim=1))
 
 
+# ── Feature‑based models ───────────────────────────────────────────
+
+
+class SensorFeatureBranch(nn.Module):
+    """Single-sensor feature encoder: n_features → hidden → out_dim."""
+
+    def __init__(self, n_features: int, hidden: int = 160, out_dim: int = 80) -> None:
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(n_features, hidden),
+            nn.BatchNorm1d(hidden),
+            nn.GELU(),
+            nn.Dropout(0.25),
+            nn.Linear(hidden, out_dim),
+            nn.BatchNorm1d(out_dim),
+            nn.GELU(),
+            nn.Dropout(0.15),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
+class FeatureFusionNet(nn.Module):
+    """Two-branch accel/gyro fusion network for hand-crafted features.
+
+    Each sensor modality is encoded independently, then fused via
+    concat(a, g, |a-g|, a*g) → 320-D → MLP classifier.
+    """
+
+    def __init__(self, accel_dim: int, gyro_dim: int, n_classes: int) -> None:
+        super().__init__()
+        self.accel_branch = SensorFeatureBranch(accel_dim)
+        self.gyro_branch = SensorFeatureBranch(gyro_dim)
+        fused_dim = 80 * 4  # a(80) + g(80) + |a-g|(80) + a*g(80)
+        self.classifier = nn.Sequential(
+            nn.Linear(fused_dim, 192),
+            nn.BatchNorm1d(192),
+            nn.GELU(),
+            nn.Dropout(0.25),
+            nn.Linear(192, 96),
+            nn.GELU(),
+            nn.Dropout(0.15),
+            nn.Linear(96, n_classes),
+        )
+
+    def forward(self, accel: torch.Tensor, gyro: torch.Tensor) -> torch.Tensor:
+        a = self.accel_branch(accel)
+        g = self.gyro_branch(gyro)
+        fused = torch.cat([a, g, torch.abs(a - g), a * g], dim=1)
+        return self.classifier(fused)
+
+
+class FeatureMLP(nn.Module):
+    """Single-branch MLP over concatenated accel+gyro features."""
+
+    def __init__(self, n_features: int, n_classes: int) -> None:
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(n_features, 256),
+            nn.BatchNorm1d(256),
+            nn.GELU(),
+            nn.Dropout(0.30),
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.GELU(),
+            nn.Dropout(0.20),
+            nn.Linear(128, n_classes),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
+class FeatureResNet(nn.Module):
+    """Residual MLP over hand-crafted features."""
+
+    def __init__(self, n_features: int, n_classes: int) -> None:
+        super().__init__()
+        self.input_proj = nn.Linear(n_features, 128)
+        self.block1 = nn.Sequential(
+            nn.Linear(128, 128), nn.BatchNorm1d(128), nn.GELU(), nn.Dropout(0.20),
+            nn.Linear(128, 128), nn.BatchNorm1d(128), nn.GELU(), nn.Dropout(0.20),
+        )
+        self.block2 = nn.Sequential(
+            nn.Linear(128, 128), nn.BatchNorm1d(128), nn.GELU(), nn.Dropout(0.20),
+            nn.Linear(128, 128), nn.BatchNorm1d(128), nn.GELU(), nn.Dropout(0.20),
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.GELU(),
+            nn.Dropout(0.20),
+            nn.Linear(64, n_classes),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        h = self.input_proj(x)
+        h = h + self.block1(h)
+        h = h + self.block2(h)
+        return self.classifier(h)
+
+
 def build_deep_model(model_name: str, n_channels: int, n_classes: int) -> nn.Module:
     if model_name == "cnn1d":
         return CNN1D(n_channels=n_channels, n_classes=n_classes)
