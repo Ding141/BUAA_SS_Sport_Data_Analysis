@@ -12,6 +12,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from src.wisdm_arff import load_wisdm_arff_cache, load_wisdm_arff_fused, save_wisdm_arff_cache
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 class FeatureMLP(nn.Module):
     def __init__(self, n_features: int, n_classes: int) -> None:
@@ -84,7 +86,7 @@ def predict(model, data_loader) -> tuple[np.ndarray, np.ndarray]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train an optimized WISDM accel+gyro ARFF-feature deep MLP.")
-    parser.add_argument("--data-dir", default="data/wisdm/wisdm-dataset")
+    parser.add_argument("--data-dir", default=str(PROJECT_ROOT / "wisdm-dataset"))
     parser.add_argument("--cache", default="models/wisdm_deep/fused_arff_features_phone.npz")
     parser.add_argument("--model-out", default="models/wisdm_deep/wisdm_feature_mlp.pt")
     parser.add_argument("--report-dir", default="reports/wisdm_deep")

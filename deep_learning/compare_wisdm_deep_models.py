@@ -21,6 +21,8 @@ from train_wisdm_deep import (
     subject_masks,
 )
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 def train_candidate(
     architecture: str,
@@ -91,7 +93,7 @@ def train_candidate(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compare deep architectures on WISDM accel+gyro windows.")
-    parser.add_argument("--data-dir", default="data/wisdm/wisdm-dataset")
+    parser.add_argument("--data-dir", default=str(PROJECT_ROOT / "wisdm-dataset"))
     parser.add_argument("--device-type", choices=["phone", "watch"], default="phone")
     parser.add_argument("--cache", default="models/wisdm_deep/fused_windows_phone.npz")
     parser.add_argument("--report-dir", default="reports/wisdm_deep")

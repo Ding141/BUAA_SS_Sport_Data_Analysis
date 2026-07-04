@@ -39,13 +39,13 @@ CHANNELS = ["acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"]
 ACT_COLORS = ["#2196F3", "#4CAF50", "#FF9800", "#F44336", "#9C27B0", "#00BCD4"]
 BAND_COLORS = ["#1B5E20", "#4CAF50", "#FFC107", "#F44336"]
 
+sns.set_style("whitegrid")
 plt.rcParams.update({
     "figure.dpi": 200, "savefig.dpi": 200,
     "font.size": 9, "axes.titlesize": 11, "axes.labelsize": 10,
-    "font.sans-serif": ["Arial Unicode MS", "SimHei", "Heiti SC", "STHeiti"],
+    "font.sans-serif": ["SimHei", "Microsoft YaHei", "Noto Sans SC"],
     "axes.unicode_minus": False,
 })
-sns.set_style("whitegrid")
 
 
 # ═══════════════════════════════════════════════════════════════

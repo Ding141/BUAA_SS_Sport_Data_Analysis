@@ -7,9 +7,9 @@ r"""SportBUAA 跨数据集活动识别推理流水线。
     4. FeatureFusionNet推理 → Softmax输出6类概率
 
 用法:
-    python predict.py                              # 预测全部样本
-    python predict.py --sample walking0            # 预测单个样本
-    python predict.py --sample walking0 --plot     # 预测并生成时序曲线图
+    python predict.py                                # 预测全部样本
+    python predict.py --sample walking0              # 预测单个样本
+    python predict.py --sample walking0 --detail     # 终端打印逐窗口概率详情
 
 依赖:
     需要 feature_fusion_har.pt（权重）和 feature_fusion_har_meta.json（元数据）
@@ -34,8 +34,8 @@ from model import FeatureFusionNet
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_MODEL = os.path.join(SCRIPT_DIR, "feature_fusion_har.pt")
 DEFAULT_META = os.path.join(SCRIPT_DIR, "feature_fusion_har_meta.json")
-# SportBUAA 数据目录 — 请根据实际路径修改
-SPORTBUAA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "SportBUAA", "data-for-pr")
+# SportBUAA 数据目录
+SPORTBUAA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "SportBUAA")
 
 LABEL_NAMES = {0: "WALKING", 1: "WALKING_UPSTAIRS", 2: "WALKING_DOWNSTAIRS",
                3: "SITTING", 4: "STANDING", 5: "LAYING"}
@@ -55,8 +55,9 @@ def preprocess_raw(acc_df: pd.DataFrame, gyro_df: pd.DataFrame,
 
     操作:
         - 按公共时间网格线性插值至 target_fs Hz
-        - 加速度单位 m/s² → g
         - 坐标轴: (z, y, x) → (x, y, z)，与UCI HAR保持一致
+        - 注: SportBUAA 使用 Android TYPE_LINEAR_ACCELERATION，
+          已由系统完成重力补偿，数据单位为 g，无需额外单位换算和DC移除
     """
     # 提取时间戳与数据（列顺序: elapsed, z, y, x → x, y, z）
     t_acc = acc_df.iloc[:, 0].values
@@ -64,23 +65,69 @@ def preprocess_raw(acc_df: pd.DataFrame, gyro_df: pd.DataFrame,
     t_gyro = gyro_df.iloc[:, 0].values
     data_gyro = gyro_df.iloc[:, [3, 2, 1]].values.astype(np.float64)
 
-    # 公共时间网格
+    # 公共时间网格（np.arange 可能有浮点精度问题，使用 linspace 确保点数正确）
     t_start = max(t_acc[0], t_gyro[0])
     t_end = min(t_acc[-1], t_gyro[-1])
-    dt = 1.0 / target_fs
-    t_grid = np.arange(t_start, t_end, dt)
-
-    if len(t_grid) < 128:
-        raise ValueError(f"数据时长不足: {len(t_grid)}点 < 128点")
+    duration = t_end - t_start
+    n_points = int(np.floor(duration * target_fs)) + 1
+    if n_points < 128:
+        raise ValueError(f"数据时长不足: {n_points}点 < 128点")
+    t_grid = np.linspace(t_start, t_end, n_points)
 
     # 线性插值
     acc_interp = np.array([np.interp(t_grid, t_acc, data_acc[:, i]) for i in range(3)]).T
     gyro_interp = np.array([np.interp(t_grid, t_gyro, data_gyro[:, i]) for i in range(3)]).T
 
-    # 加速度 m/s² → g
-    acc_interp /= GRAVITY
-
     return acc_interp.astype(np.float32), gyro_interp.astype(np.float32)
+
+
+# ---------------------------------------------------------------------------
+# 坐标轴对齐
+# ---------------------------------------------------------------------------
+def detect_and_flip_axes(acc: np.ndarray, gyro: np.ndarray,
+                         uci_acc_mean: np.ndarray, uci_gyro_mean: np.ndarray,
+                         auto_threshold: float = 0.3) -> tuple[np.ndarray, np.ndarray, list[str]]:
+    """检测并翻转坐标轴方向，使之与 UCI HAR 训练集对齐。
+
+    策略：对加速度计和陀螺仪的每个轴，比较 SportBUAA 静态段均值与
+    UCI HAR 训练集对应通道均值的符号。符号不一致的轴自动翻转。
+
+    Args:
+        acc:  (T, 3) 加速度计插值后数据 (x, y, z)，单位 g
+        gyro: (T, 3) 陀螺仪插值后数据 (x, y, z)
+        uci_acc_mean:  (3,) UCI HAR 训练集加速度计各通道全局均值
+        uci_gyro_mean: (3,) UCI HAR 训练集陀螺仪各通道全局均值
+        auto_threshold: 均值绝对值低于此阈值时跳过翻转检测（近零均值无方向性）
+
+    Returns:
+        acc_aligned:  (T, 3) 对齐后的加速度计数据
+        gyro_aligned: (T, 3) 对齐后的陀螺仪数据
+        flips:        记录翻转操作的字符串列表
+    """
+    acc_aligned = acc.copy()
+    gyro_aligned = gyro.copy()
+    flips = []
+    axis_names = ["x", "y", "z"]
+
+    for i, name in enumerate(axis_names):
+        # 加速度计
+        sport_mean = float(np.mean(acc[:, i]))
+        uci_mean = float(uci_acc_mean[i])
+        if abs(sport_mean) > auto_threshold and abs(uci_mean) > auto_threshold:
+            if np.sign(sport_mean) != np.sign(uci_mean):
+                acc_aligned[:, i] *= -1.0
+                flips.append(f"acc_{name}")
+        # 陀螺仪同理
+        sport_mean_g = float(np.mean(gyro[:, i]))
+        uci_mean_g = float(uci_gyro_mean[i])
+        if abs(sport_mean_g) > auto_threshold and abs(uci_mean_g) > auto_threshold:
+            if np.sign(sport_mean_g) != np.sign(uci_mean_g):
+                gyro_aligned[:, i] *= -1.0
+                flips.append(f"gyro_{name}")
+
+    if flips:
+        print(f"  [坐标轴对齐] 检测到方向不一致，已翻转: {', '.join(flips)}")
+    return acc_aligned, gyro_aligned, flips
 
 
 # ---------------------------------------------------------------------------
@@ -148,44 +195,23 @@ def predict_sample(windows: np.ndarray, model: FeatureFusionNet,
 
 
 # ---------------------------------------------------------------------------
-# 时序可视化
+# 逐窗口详情打印
 # ---------------------------------------------------------------------------
-def plot_timeline(results: list[dict], sample_name: str, output_dir: str):
-    """绘制时序预测曲线：横轴时间，纵轴各类别置信度。"""
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-    plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'DejaVu Sans']
-    plt.rcParams['axes.unicode_minus'] = False
-
-    fig, ax = plt.subplots(figsize=(14, 5))
-    t = np.arange(len(results)) * 64 / 50  # 步长64 / 50Hz = 每个窗口对应时间
-
-    colors = ['#E41A1C', '#377EB8', '#4DAF4A', '#984EA3', '#FF7F00', '#A65628']
-    for cls_idx in range(6):
-        probs = [r["probs"][LABEL_NAMES[cls_idx]] for r in results]
-        ax.plot(t, probs, color=colors[cls_idx], linewidth=1.5,
-                label=LABEL_CN[cls_idx], alpha=0.85)
-
-    # 标注主导预测
-    dominant = np.array([np.argmax([r["probs"][LABEL_NAMES[i]] for i in range(6)]) for r in results])
-    for cls_idx in range(6):
-        mask = dominant == cls_idx
-        if mask.any():
-            ax.scatter(t[mask], [1.02] * mask.sum(), color=colors[cls_idx],
-                       marker='|', s=30, alpha=0.6)
-
-    ax.set_xlabel('时间 (s)', fontsize=11)
-    ax.set_ylabel('Softmax 置信度', fontsize=11)
-    ax.set_title(f'时序预测曲线 — {sample_name}', fontsize=13, fontweight='bold')
-    ax.set_ylim(0, 1.15)
-    ax.legend(loc='upper right', fontsize=8, ncol=3, framealpha=0.9)
-    ax.grid(axis='y', alpha=0.3)
-    plt.tight_layout()
-    path = os.path.join(output_dir, f"temporal_{sample_name}.png")
-    plt.savefig(path, dpi=200)
-    plt.close()
-    print(f"  时序图已保存: {path}")
+def print_details(results: list[dict], sample_name: str):
+    """在终端逐窗口输出各帧预测概率分布。"""
+    print(f"\n  {'─' * 58}")
+    print(f"  样本 [{sample_name}] 逐窗口推理详情 ({len(results)} 窗口)")
+    print(f"  {'─' * 58}")
+    for r in results:
+        t_sec = r["window_idx"] * 64 / 50  # 步长64 / 50Hz
+        pred_cn = r["pred_label_cn"]
+        conf = r["confidence"]
+        probs_str = "  ".join(
+            f"{LABEL_CN[i]}:{r['probs'][LABEL_NAMES[i]]:.3f}" for i in range(6)
+        )
+        print(f"  t={t_sec:5.1f}s  预测={pred_cn}  置信度={conf:.2%}")
+        print(f"           {probs_str}")
+    print()
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +240,10 @@ def main(args):
     model.eval()
 
     norm = meta.get("normalization", {})
+
+    # 加载 UCI HAR 训练集通道均值用于坐标轴对齐检测
+    uci_acc_mean = np.array(norm.get("uci_acc_channel_mean", [0, 0, 0]), dtype=np.float32)
+    uci_gyro_mean = np.array(norm.get("uci_gyro_channel_mean", [0, 0, 0]), dtype=np.float32)
 
     # 查找样本
     sportbuaa_dir = args.data_dir or SPORTBUAA_DIR
@@ -258,15 +288,17 @@ def main(args):
             print(f"{name:<28s} {'[加载失败]':>6s}  {e}")
             continue
 
-        # 步骤1+2: 预处理 + 滑窗
+        # 步骤1+2: 预处理 + 坐标轴对齐 + 滑窗
         try:
             acc_interp, gyro_interp = preprocess_raw(acc_df, gyro_df)
-            windows = sliding_window(acc_interp, gyro_interp)
+            # 坐标轴对齐：检测并翻转与UCI HAR方向不一致的轴
+            acc_aligned, gyro_aligned, flips = detect_and_flip_axes(
+                acc_interp, gyro_interp, uci_acc_mean, uci_gyro_mean)
+            windows = sliding_window(acc_aligned, gyro_aligned)
         except ValueError as e:
             # 数据可能已经是128点的预切片，直接用一个窗口
             acc_arr = acc_df.iloc[:, [3, 2, 1]].values.T.astype(np.float32)  # x,y,z
             gyro_arr = gyro_df.iloc[:, [3, 2, 1]].values.T.astype(np.float32)
-            acc_arr /= GRAVITY
             single_win = np.concatenate([acc_arr, gyro_arr], axis=0)  # (6, N)
             if single_win.shape[1] >= 128:
                 single_win = single_win[:, :128]
@@ -287,9 +319,9 @@ def main(args):
             avg_conf = np.mean([r["confidence"] for r in results])
             print(f"{name:<28s} {len(results):>6d}  {dominant[0]:<16s} {avg_conf:7.2%}")
 
-            # 可选: 画时序图
-            if args.plot:
-                plot_timeline(results, name, os.path.dirname(args.meta))
+            # 可选: 打印逐窗口详情
+            if args.detail:
+                print_details(results, name)
         else:
             print(f"{name:<28s} {'[无结果]':>6s}")
 
@@ -302,6 +334,6 @@ if __name__ == "__main__":
     parser.add_argument("--meta", default=DEFAULT_META, help="元数据 .json 文件")
     parser.add_argument("--sample", default=None, help="单个样本名")
     parser.add_argument("--data_dir", default=None, help="SportBUAA 数据目录")
-    parser.add_argument("--plot", action="store_true", help="生成时序预测曲线图")
+    parser.add_argument("--detail", action="store_true", help="终端逐窗口打印预测概率详情")
     args = parser.parse_args()
     main(args)

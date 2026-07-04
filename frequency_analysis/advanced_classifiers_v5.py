@@ -46,14 +46,14 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "UCI HAR Dataset")
 for d in 目录.values():
     os.makedirs(d, exist_ok=True)
 
+sns.set_style("whitegrid")
 plt.rcParams.update({
     "figure.dpi": 200, "savefig.dpi": 200,
     "font.size": 10, "axes.titlesize": 12, "axes.labelsize": 10,
     "legend.fontsize": 8,
+    "font.sans-serif": ["SimHei", "Microsoft YaHei", "Noto Sans SC"],
+    "axes.unicode_minus": False,
 })
-plt.rcParams["font.sans-serif"] = ["Arial Unicode MS", "SimHei", "Heiti SC", "STHeiti"]
-plt.rcParams["axes.unicode_minus"] = False
-sns.set_style("whitegrid")
 
 
 # ═══════════════════════════════════════════════════════════════

@@ -32,18 +32,19 @@ FS = 50              # 默认采样频率 (UCI: 50 Hz, WISDM accel: 20 Hz)
 N_SAMPLES = 128      # 每窗口采样点数
 SAVE_DIR = os.path.join(PROJECT_ROOT, "figures", "分类流水线")
 os.makedirs(SAVE_DIR, exist_ok=True)
+BASE_SAVE_DIR = SAVE_DIR  # 基准目录，各数据集在此之下建子目录
 
 # 说明: 该脚本实现基于频域（FFT/STFT）特征的人体动作识别流水线。
 # 流程包括: 数据加载 → 分窗（若需） → 每窗口 FFT/STFT 特征提取 → 决策树训练与可视化。
 
+sns.set_style("whitegrid")
 plt.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 150,
     "font.size": 10, "axes.titlesize": 13, "axes.labelsize": 11,
     "legend.fontsize": 8, "xtick.labelsize": 8, "ytick.labelsize": 8,
-    "font.sans-serif": ["Arial Unicode MS", "SimHei", "Heiti SC", "STHeiti"],
+    "font.sans-serif": ["SimHei", "Microsoft YaHei", "Noto Sans SC"],
     "axes.unicode_minus": False,
 })
-sns.set_style("whitegrid")
 
 
 # ╔══════════════════════════════════════════════════════════════════════╗
@@ -591,6 +592,7 @@ def run_pipeline(dataset):
     ds_name = dataset.name
     ds_name_map = {"UCI HAR": "uci", "WISDM": "wisdm"}
     ds_tag = ds_name_map.get(ds_name, ds_name.lower().replace(" ", "_"))
+    SAVE_DIR = os.path.join(BASE_SAVE_DIR, ds_tag)
     os.makedirs(SAVE_DIR, exist_ok=True)
 
     # ── 1. 加载数据 ──
@@ -745,7 +747,7 @@ def main():
         delta = res["ablation"]["融合"] - res["ablation"]["纯时域"]
         print(f"    频域提升:     {delta * 100:+.2f} 个百分点")
 
-    print(f"\n  所有图像已保存至: {os.path.abspath('figures')}/")
+    print(f"\n  所有图像已保存至: {BASE_SAVE_DIR}/")
     print(f"{'═' * 60}")
 
 

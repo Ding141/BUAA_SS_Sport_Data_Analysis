@@ -54,13 +54,7 @@ cd prediction_demo
 python predict.py
 
 # 预测单个样本
-python predict.py --sample walking0
-
-# 预测并生成时序曲线图
-python predict.py --sample walking0 --plot
-
-# 指定自定义数据目录
-python predict.py --data_dir /path/to/SportBUAA/data-for-pr
+python predict.py --sample sitting0 --detail
 ```
 
 ## 依赖

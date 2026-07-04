@@ -10,8 +10,10 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.wisdm_arff import load_wisdm_arff_cache
+from src.wisdm_arff import load_wisdm_arff_cache, load_wisdm_arff_fused, save_wisdm_arff_cache
 from train_wisdm_feature_mlp import normalize, subject_masks
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 class SensorFeatureBranch(nn.Module):
@@ -142,6 +144,7 @@ def evaluate_and_save(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train a two-branch accel/gyro feature fusion network.")
+    parser.add_argument("--data-dir", default=str(PROJECT_ROOT / "wisdm-dataset"))
     parser.add_argument("--cache", default="models/wisdm_deep/fused_arff_features_phone.npz")
     parser.add_argument("--model-out", default="models/wisdm_deep/wisdm_feature_fusion.pt")
     parser.add_argument("--report-dir", default="reports/wisdm_deep")
@@ -151,7 +154,12 @@ def main() -> None:
     parser.add_argument("--label-smoothing", type=float, default=0.03)
     args = parser.parse_args()
 
-    bundle = load_wisdm_arff_cache(Path(args.cache))
+    cache_path = Path(args.cache)
+    if cache_path.exists():
+        bundle = load_wisdm_arff_cache(cache_path)
+    else:
+        bundle = load_wisdm_arff_fused(Path(args.data_dir), device="phone")
+        save_wisdm_arff_cache(bundle, cache_path)
     train_mask, val_mask, test_mask = subject_masks(bundle.subjects)
     train_val_mask = train_mask | val_mask
     X, mean, std = normalize(bundle.X, train_val_mask)

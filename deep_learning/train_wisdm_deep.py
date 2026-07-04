@@ -17,6 +17,8 @@ from src.wisdm_data import (
     save_wisdm_cache,
 )
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 def subject_masks(subjects: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     train_mask = subjects <= 1639
@@ -86,7 +88,7 @@ def predict_all(model: nn.Module, loader: DataLoader, device: torch.device) -> t
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train a deep WISDM accel+gyro activity classifier.")
-    parser.add_argument("--data-dir", default="data/wisdm/wisdm-dataset", help="WISDM dataset directory")
+    parser.add_argument("--data-dir", default=str(PROJECT_ROOT / "wisdm-dataset"), help="WISDM dataset directory")
     parser.add_argument("--device-type", choices=["phone", "watch"], default="phone", help="WISDM device source")
     parser.add_argument("--cache", default="models/wisdm_deep/fused_windows_phone.npz", help="Window cache path")
     parser.add_argument("--model-out", default="models/wisdm_deep/wisdm_deep_model.pt", help="Model checkpoint path")
