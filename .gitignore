@@ -216,3 +216,22 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Datasets (large files)
+UCI HAR Dataset/
+wisdm-dataset/
+
+# Generated figures
+showcase/figures/
+frequency_analysis/figures/
+
+# Trained model checkpoints (large .pt files)
+deep_learning/models/wisdm_deep/*.pt
+deep_learning/models/wisdm_deep/*.npz
+
+# Jupyter notebooks
+*.ipynb
+
+# OS files
+.DS_Store
+Thumbs.db
